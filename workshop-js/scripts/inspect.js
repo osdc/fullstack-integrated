@@ -50,6 +50,7 @@ style.textContent = `
     #inspect-popup pre {
         background: #f8f9fa;
         padding: 12px;
+        padding-bottom: 0;
         border-radius: 4px;
         overflow-x: auto;
         white-space: pre-wrap;
@@ -86,7 +87,11 @@ function formatCSS(rule) {
         return css;
     }
 
-    const selector = css.substring(0, start).trim();
+    const selector = css
+        .substring(0, start)
+        .trim()
+        .replace(/,\s*/g, ",\n");
+
     const properties = css.substring(start + 1, end).trim();
 
     let result = selector + " {\n";
@@ -99,7 +104,7 @@ function formatCSS(rule) {
         }
     });
 
-    result += "}";
+    result += "}\n";
 
     return result;
 }
@@ -122,7 +127,12 @@ function showInspector(element) {
     htmlTitle.textContent = "HTML";
 
     const html = document.createElement("pre");
-    html.textContent = element.outerHTML;
+
+    const htmlBlock = document.createElement("div");
+    htmlBlock.style.paddingBottom = "12px";
+    htmlBlock.textContent = element.outerHTML;
+
+    html.appendChild(htmlBlock);
 
     const cssTitle = document.createElement("h3");
     cssTitle.textContent = "CSS";
@@ -132,10 +142,13 @@ function showInspector(element) {
     let cssText = "";
 
     for (const sheet of document.styleSheets) {
-        for (const rule of sheet.cssRules) {
-            if (rule.selectorText && element.matches(rule.selectorText)) {
-                cssText += formatCSS(rule) + "\n";
+        try {
+            for (const rule of sheet.cssRules) {
+                if (rule.selectorText && element.matches(rule.selectorText)) {
+                    cssText += formatCSS(rule) + "\n";
+                }
             }
+        } catch (error) {
         }
     }
 
@@ -145,35 +158,13 @@ function showInspector(element) {
 
     css.textContent = cssText;
 
-    const computedTitle = document.createElement("h3");
-    computedTitle.textContent = "Implied CSS";
-
-    const computedCss = document.createElement("pre");
-
-    const computed = getComputedStyle(element);
-    let computedText = "";
-
-    for (let i = 0; i < computed.length; i++) {
-        const property = computed[i];
-
-        computedText +=
-            property +
-            ": " +
-            computed.getPropertyValue(property) +
-            ";\n";
-    }
-
-    computedCss.textContent = computedText;
-
     popup.append(
         close,
         title,
         htmlTitle,
         html,
         cssTitle,
-        css,
-        computedTitle,
-        computedCss
+        css
     );
 
     document.body.append(overlay, popup);
